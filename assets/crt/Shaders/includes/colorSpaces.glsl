@@ -1,0 +1,63 @@
+//
+// Color space conversions
+//
+const vec3	luma601 = vec3 ( 0.299, 0.587, 0.114 );
+const vec3	luma709 = vec3 ( 0.2126, 0.7152, 0.0722 );
+
+const mat3 yuv2rgb_mat = mat3 ( 1.0,		 1.0,		1.0,
+								0.0,		-0.39465,	2.03211,
+								1.13983,	-0.581,		0.0 );
+//-----------------------------------------------------------------------------
+
+vec3 palGamma ( vec3 rgb )
+{
+	const float	sRGBGamma = 2.2;
+	const float	PALgamma = 2.8;
+
+	// Apply gamma correction (2.8 to 2.2). Out-of-gamut YUV can decode to
+	// negative RGB, and pow() of a negative value is NaN, which would poison
+	// the whole mip chain; clamp the base first.
+	return pow ( max ( rgb, vec3 ( 0.0 ) ), vec3 ( 1.0 / sRGBGamma * PALgamma ) );
+}
+//-----------------------------------------------------------------------------
+
+vec3 yuv2rgb ( vec3 yuv )
+{
+	return palGamma ( yuv2rgb_mat * yuv );
+}
+//-----------------------------------------------------------------------------
+
+const mat3 yiq2rgb_mat = mat3 ( 1.0,	 1.0,	 1.0,
+								1.63,	-0.378, -1.089,
+								0.317,	-0.466,  1.677 );
+//-----------------------------------------------------------------------------
+
+vec3 yiq2rgb ( vec3 yiq )
+{
+	return yiq2rgb_mat * yiq;
+}
+//-----------------------------------------------------------------------------
+
+vec3 srgbToLinear ( vec3 col )
+{
+	return mix ( col / 12.92, pow ( ( col + 0.055 ) / 1.055, vec3 ( 2.4 ) ), step ( 0.04045, col ) );
+}
+//-----------------------------------------------------------------------------
+
+vec3 linearToSrgb ( vec3 col )
+{
+	return mix ( col * 12.92, 1.055 * pow ( col, vec3 ( 1.0 / 2.4 ) ) - 0.055, step ( 0.0031308, col ) );
+}
+//-----------------------------------------------------------------------------
+
+float getsRGBLuma ( vec3 col )
+{
+	return dot ( col, luma601 );
+}
+//-----------------------------------------------------------------------------
+
+float getLinearLuma ( vec3 col )
+{
+	return dot ( col, luma709 );
+}
+//-----------------------------------------------------------------------------
